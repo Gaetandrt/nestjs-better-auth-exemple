@@ -6,7 +6,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 
 @Injectable()
 export class AuthService {
-  public betterAuth: any;
+  public betterAuth: ReturnType<typeof betterAuth>;
 
   constructor() {
     const prisma = new PrismaClient();
