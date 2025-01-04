@@ -1,29 +1,44 @@
-import { All, Controller, Logger, Req, Res } from '@nestjs/common'
-import { ApiTags } from '@nestjs/swagger'
+import {
+  All,
+  Controller,
+  InternalServerErrorException,
+  Logger,
+  Req,
+  Res,
+} from "@nestjs/common";
+import { ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Request, Response } from "express";
 
-import { toNodeHandler } from 'better-auth/node'
-import { AuthService } from './auth.service'
+import { toNodeHandler } from "better-auth/node";
+import { AuthService } from "./auth.service";
 
-@Controller('api/auth')
-@ApiTags('api/auth')
+@Controller("api/auth")
+@ApiTags("api/auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-  private readonly logger = new Logger(AuthController.name)
+  private readonly logger = new Logger(AuthController.name);
 
-  @All('*')
+  @All("*")
+  @ApiOperation({ summary: "Handle all authentication routes" })
   async handleAuth(@Req() req: Request, @Res() res: Response) {
-    this.logger.log('handleAuth')
     if (!this.authService.betterAuth) {
-      throw new Error('BetterAuth not initialized')
+      this.logger.error("BetterAuth not initialized");
+      throw new InternalServerErrorException(
+        "Authentication service not initialized"
+      );
     }
 
-    console.log(req.url)
-    this.logger.log('req', req.body)
-    const authHandler = toNodeHandler(this.authService.betterAuth)
+    try {
+      const authHandler = toNodeHandler(this.authService.betterAuth);
+      const result = await authHandler(req, res);
 
-    const result = await authHandler(req as any, res as any)
-    console.log('result', result)
-
-    return result
+      this.logger.debug(
+        `Auth handler completed with result: ${JSON.stringify(result)}`
+      );
+      return result;
+    } catch (error) {
+      this.logger.error(`Auth handler failed: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 }
