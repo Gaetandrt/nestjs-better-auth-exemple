@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model User {
+  id               String             @id @unique
+  name             String
+  email            String             @unique
+  emailVerified    Boolean
+  image            String?
+  createdAt        DateTime
+  updatedAt        DateTime
+  accounts         Account[]
+  purchase_history purchase_history[]
+  sessions         Session[]
+  shopping_list    shopping_list[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verification")
+}
+
+model article {
+  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime?               @default(now()) @db.Timestamptz(6)
+  name                  String                  @default("")
+  quantity_type         String
+  category_id           String                  @db.Uuid
+  article_category      article_category        @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  article_item          article_item[]
+  purchase_history_item purchase_history_item[]
+}
+
+model article_category {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String    @default("")
+  img        String?   @default("")
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
+  article    article[]
+}
+
+model article_item {
+  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopping_list_id String        @db.Uuid
+  article_id       String        @db.Uuid
+  checked          Boolean       @default(false)
+  quantity         String
+  created_at       DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime?     @default(now()) @db.Timestamptz(6)
+  article          article       @relation(fields: [article_id], references: [id], onDelete: Cascade)
+  shopping_list    shopping_list @relation(fields: [shopping_list_id], references: [id], onDelete: Cascade)
+}
+
+model purchase_history {
+  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id               String
+  shopping_list_id      String?                 @db.Uuid
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime?               @default(now()) @db.Timestamptz(6)
+  shopping_list         shopping_list?          @relation(fields: [shopping_list_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user                  User                    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  purchase_history_item purchase_history_item[]
+}
+
+model purchase_history_item {
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  article_id          String           @db.Uuid
+  purchase_history_id String           @db.Uuid
+  quantity            String
+  created_at          DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?        @default(now()) @db.Timestamptz(6)
+  article             article          @relation(fields: [article_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  purchase_history    purchase_history @relation(fields: [purchase_history_id], references: [id], onDelete: Cascade)
+}
+
+model shopping_list {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  user_id          String
+  title            String             @default("")
+  emoji            String?
+  description      String?
+  color            String
+  article_item     article_item[]
+  purchase_history purchase_history[]
+  user             User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
